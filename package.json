@@ -1,26 +1,25 @@
 {
-  "name": "extension-hello-world",
-  "version": "1.0.0",
-  "description": "Simple Hello World Twitch Extension",
-  "main": "index.js",
-  "scripts": {
-    "cert": "node bin/generate_cert.js server",
-    "start": "node services/backend"
-  },
-  "keywords": [
-    "twitch",
-    "extension"
-  ],
-  "author": "Emily Rose <amorelandra@twitch.tv>",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "boom": "^7.2.0",
-    "color": "^3.0.0",
-    "commander": "^2.15.0",
-    "hapi": "^17.2.2",
-    "inert": "^5.1.0",
-    "jsonwebtoken": "^8.2.0",
-    "request": "^2.85.0",
-    "selfsigned": "^1.10.2"
-  }
+	"name": "extension-hello-world",
+	"version": "1.0.0",
+	"description": "Simple Hello World Twitch Extension",
+	"main": "index.js",
+	"scripts": {
+		"cert": "node bin/generate_cert.js server",
+		"start": "node services/backend"
+	},
+	"keywords": [
+		"twitch",
+		"extension"
+	],
+	"author": "SunFlow based on the work of Emily Rose <amorelandra@twitch.tv>",
+	"license": "Apache-2.0",
+	"dependencies": {
+		"boom": "^7.2.0",
+		"color": "^3.0.0",
+		"commander": "^2.15.0",
+		"cors": "^2.8.5",
+		"express": "^4.18.1",
+		"jsonwebtoken": "^8.2.0",
+		"selfsigned": "^2.0.1"
+	}
 }

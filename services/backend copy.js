@@ -1,14 +1,11 @@
 const fs = require('fs');
+const Hapi = require('hapi');
 const path = require('path');
 const Boom = require('boom');
 const color = require('color');
 const ext = require('commander');
 const jsonwebtoken = require('jsonwebtoken');
-
-const http = require('http');
-const https = require('https');
-const express = require('express');
-const cors = require('cors');
+// const request = require('request');
 
 // The developer rig uses self-signed certificates.  Node doesn't accept them
 // by default.  Do not use this in production.
@@ -45,16 +42,17 @@ ext
 const secret = Buffer.from(getOption('secret', 'ENV_SECRET'), 'base64');
 const clientId = getOption('clientId', 'ENV_CLIENT_ID');
 
-const app = express();
-let server;
-
 const serverOptions = {
 	host: 'localhost',
 	port: 8081,
+	routes: {
+		cors: {
+			origin: ['*'],
+		},
+	},
 };
 const serverPathRoot = path.resolve(__dirname, '..', 'conf', 'server');
 verboseLog('root: ' + serverPathRoot);
-
 if (
 	fs.existsSync(serverPathRoot + '.crt') &&
 	fs.existsSync(serverPathRoot + '.key')
@@ -65,19 +63,37 @@ if (
 		cert: fs.readFileSync(serverPathRoot + '.crt'),
 		key: fs.readFileSync(serverPathRoot + '.key'),
 	};
-	server = https.createServer(serverOptions.tls, app);
-} else server = http.createServer(app);
-server.listen(serverOptions.port, serverOptions.host, data =>
-	console.log(STRINGS.serverStarted, 'https://localhost:8081')
-);
+}
+const server = new Hapi.Server(serverOptions);
 
-app.use(cors());
+(async () => {
+	// Handle a viewer request to cycle the color.
+	server.route({
+		method: 'POST',
+		path: '/color/cycle',
+		handler: colorCycleHandler,
+	});
 
-app.post('/color/cycle', colorCycleHandler);
-app.get('/color/query', colorQueryHandler);
-app.post('/color/cycle1', function (req, res) {
-	res.send('I did something!');
-});
+	// Handle a new viewer requesting the color.
+	server.route({
+		method: 'GET',
+		path: '/color/query',
+		handler: colorQueryHandler,
+	});
+
+	// Test route
+	server.route({
+		method: 'POST',
+		path: '/color/cycle1',
+		handler: function (request, h) {
+			return 'I did something!';
+		},
+	});
+
+	// Start the server.
+	await server.start();
+	console.log(STRINGS.serverStarted, server.info.uri);
+})();
 
 function usingValue(name) {
 	return `Using environment variable for ${name}`;
@@ -117,12 +133,11 @@ function verifyAndDecode(header) {
 	throw Boom.unauthorized(STRINGS.invalidAuthHeader);
 }
 
-function colorCycleHandler(req, res) {
+function colorCycleHandler(req) {
 	verboseLog('clycle ocolor');
 	// Verify all requests.
 	const payload = verifyAndDecode(req.headers.authorization);
 	const { channel_id: channelId, opaque_user_id: opaqueUserId } = payload;
-	verboseLog(payload);
 
 	// Store the color for the channel.
 	let currentColor = channelColors[channelId] || initialColor;
@@ -135,12 +150,13 @@ function colorCycleHandler(req, res) {
 	channelColors[channelId] = currentColor;
 
 	verboseLog('cylce Color');
+	twitch.rig.log('gonna cylce color');
 
-	// return currentColor;
-	res.send(currentColor);
+	return currentColor;
 }
 
-function colorQueryHandler(req, res) {
+function colorQueryHandler(req) {
+	verboseLog('query ocolor');
 	// Verify all requests.
 	const payload = verifyAndDecode(req.headers.authorization);
 
@@ -148,7 +164,17 @@ function colorQueryHandler(req, res) {
 	const { channel_id: channelId, opaque_user_id: opaqueUserId } = payload;
 	const currentColor = color(channelColors[channelId] || initialColor).hex();
 	verboseLog(STRINGS.sendColor, currentColor, opaqueUserId);
+	return currentColor;
+}
 
-	// return currentColor;
-	res.send(currentColor);
+function colorTestHandler(req) {
+	verboseLog('test test');
+	// Verify all requests.
+	const payload = verifyAndDecode(req.headers.authorization);
+
+	// Get the color for the channel from the payload and return it.
+	const { channel_id: channelId, opaque_user_id: opaqueUserId } = payload;
+	const currentColor = color(channelColors[channelId] || initialColor).hex();
+	verboseLog(STRINGS.sendColor, currentColor, opaqueUserId);
+	return currentColor;
 }

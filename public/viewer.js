@@ -1,64 +1,86 @@
 let token = '';
 let tuid = '';
 
+const verboseLogging = true;
+
+function verboseLog(message) {
+	if (verboseLogging) console.log(message);
+	twitch.rig.log(message);
+}
+
 const twitch = window.Twitch.ext;
 
 // create the request options for our Twitch API calls
 const requests = {
-  set: createRequest('POST', 'cycle'),
-  get: createRequest('GET', 'query')
+	set: createRequest('POST', 'cycle'),
+	get: createRequest('GET', 'query'),
 };
 
-function createRequest (type, method) {
-  return {
-    type: type,
-    url: location.protocol + '//localhost:8081/color/' + method,
-    success: updateBlock,
-    error: logError
-  };
+function createRequest(type, method) {
+	verboseLog('location: ' + location);
+	let url = location.protocol + '//localhost:8081/color/' + method;
+	url = 'https://localhost:8081/color/' + method;
+	return {
+		type: type,
+		url,
+		success: updateBlock,
+		error: logError,
+	};
 }
 
-function setAuth (token) {
-  Object.keys(requests).forEach((req) => {
-    twitch.rig.log('Setting auth headers');
-    requests[req].headers = { 'Authorization': 'Bearer ' + token };
-  });
+function setAuth(token) {
+	Object.keys(requests).forEach(req => {
+		verboseLog('Setting auth headers');
+		verboseLog("'Authorization': 'Bearer ' " + token);
+		requests[req].headers = { 'Authorization': 'Bearer ' + token };
+	});
 }
 
 twitch.onContext(function (context) {
-  twitch.rig.log(context);
+	verboseLog(context);
 });
 
 twitch.onAuthorized(function (auth) {
-  // save our credentials
-  token = auth.token;
-  tuid = auth.userId;
+	// save our credentials
+	token = auth.token;
+	tuid = auth.userId;
 
-  // enable the button
-  $('#cycle').removeAttr('disabled');
+	// enable the button
+	$('#cycle').removeAttr('disabled');
 
-  setAuth(token);
-  $.ajax(requests.get);
+	setAuth(token);
+	$.ajax(requests.get);
 });
 
-function updateBlock (hex) {
-  twitch.rig.log('Updating block color');
-  $('#color').css('background-color', hex);
+function updateBlock(hex) {
+	verboseLog('Updating block color');
+	$('#color').css('background-color', hex);
 }
 
 function logError(_, error, status) {
-  twitch.rig.log('EBS request returned '+status+' ('+error+')');
+	verboseLog(
+		'EBS request returned : [' + typeof _ + '] ' + status + ' (' + error + ')'
+	);
 }
 
 function logSuccess(hex, status) {
-  twitch.rig.log('EBS request returned '+hex+' ('+status+')');
+	verboseLog('EBS request returned success: ' + hex + ' (' + status + ')');
 }
 
 $(function () {
-  // when we click the cycle button
-  $('#cycle').click(function () {
-  if(!token) { return twitch.rig.log('Not authorized'); }
-    twitch.rig.log('Requesting a color cycle');
-    $.ajax(requests.set);
-  });
+	// when we click the cycle button
+	$('#cycle').click(function () {
+		if (!token) return verboseLog('Not authorized');
+
+		verboseLog('Requesting a color cycle from ' + location.protocol);
+		$.ajax(requests.set);
+	});
+
+	// when we click the cycle button
+	$('#query').click(function () {
+		if (!token) return verboseLog('Not authorized');
+
+		verboseLog('Requesting current color from ' + location.protocol);
+		$.ajax(requests.get);
+	});
 });
